@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { apiCookie } from "./contants";
 
 const greetMsg = ref("");
 const name = ref("");
@@ -8,6 +9,19 @@ const name = ref("");
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   greetMsg.value = await invoke("greet", { name: name.value });
+}
+
+async function loadFans() {
+  try {
+    const fansData = await invoke("fetch_fans", {
+      cookie: apiCookie,
+      page: 14,
+      uid: "6005682439"
+    });
+    console.log("粉丝数据:", fansData.users );
+  } catch (err) {
+    console.error("请求出错:", err);
+  }
 }
 </script>
 
@@ -28,7 +42,7 @@ async function greet() {
     </div>
     <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>
 
-    <form class="row" @submit.prevent="greet">
+    <form class="row" @submit.prevent="loadFans">
       <input id="greet-input" v-model="name" placeholder="Enter a name..." />
       <button type="submit">Greet</button>
     </form>
