@@ -35,16 +35,36 @@ interface FansData {
 export type { WeiboUser, FansData };
 
 const router = useRouter();
+function extractWeiboId(input: string) {
+  // 匹配纯数字ID（如 7961825456）
+  if (/^\d+$/.test(input)) return input;
+
+  // 匹配PC端URL：https://weibo.com/u/7961825456
+  const pcMatch = input.match(/https?:\/\/weibo\.com\/u\/(\d+)/i);
+  if (pcMatch && pcMatch[1]) return pcMatch[1];
+
+  // 匹配移动端URL：https://m.weibo.com/u/7961825456 或 https://m.weibo.com/p/1005057961825456
+  const mwebMatch = input.match(
+    /(?:https?:\/\/m\.weibo\.(?:com|cn)\/(?:u|p\/100505)\/(\d+))/i
+  );
+  if (mwebMatch && mwebMatch[1]) return mwebMatch[1];
+
+  return null; // 无效输入
+}
 
 // 粉丝数据状态管理
 const fansData = ref<FansData>({ users: [] });
 const loading = ref<boolean>(false);
 const currentPage = ref<number>(1);
-const uid = ref<string>("6005682439");
+const inputUId = ref<string>("6005682439");
 const cookie = ref<string>(apiCookie); // 添加 cookie 变量，默认使用 apiCookie
 
+const uid = computed(() => {
+  return extractWeiboId(inputUId.value);
+});
+
 // 统一的常用语列表
-const commonMessages = ref<{id: number, content: string}[]>([
+const commonMessages = ref<{ id: number; content: string }[]>([
   { id: 1, content: "感谢关注，我会持续更新优质内容！" },
   { id: 2, content: "新内容已更新，欢迎查看！" },
   { id: 3, content: "有任何问题都可以随时联系我哦~" },
@@ -173,7 +193,7 @@ loadFans();
 
         <!-- 参数设置卡片组件 -->
         <ParamsCard
-          v-model:uid="uid"
+          v-model:uid="inputUId"
           v-model:cookie="cookie"
           v-model:collapsed="paramsCardCollapsed"
           :loading="loading"
@@ -246,11 +266,11 @@ loadFans();
       :commonMessages="commonMessages"
       @remove-target="(userId) => selectedFans.delete(userId)"
     />
-      
+
     <!-- 只保留一个编辑常用语弹窗 -->
     <EditCommonMessagesModal
       v-model:visible="showEditMessagesModal"
-      v-model:messages="commonMessages" 
+      v-model:messages="commonMessages"
       title="常用语"
     />
   </main>
