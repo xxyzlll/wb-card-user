@@ -16,11 +16,11 @@ const navigateToFansDetail = () => {
           <el-icon class="icon"><user /></el-icon>
         </div>
         <h2>粉丝列表</h2>
-        <p>查看并管理您的微博粉丝，支持批量私信功能</p>
+        <!-- <p>查看并管理您的微博粉丝，支持批量私信功能</p> -->
       </el-card>
       
       <!-- 预留其他功能卡片位置 -->
-      <el-card class="feature-card disabled" shadow="hover">
+      <!-- <el-card class="feature-card disabled" shadow="hover">
         <div class="icon-container">
           <el-icon class="icon"><data-analysis /></el-icon>
         </div>
@@ -34,7 +34,7 @@ const navigateToFansDetail = () => {
         </div>
         <h2>消息中心</h2>
         <p>管理所有私信和评论互动（即将上线）</p>
-      </el-card>
+      </el-card> -->
     </div>
     
     <div class="footer">
