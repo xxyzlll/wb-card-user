@@ -138,7 +138,7 @@ async function batchSendMessage(): Promise<void> {
   if (failedRecords.value.length > 0) {
     resultMessage += "<br><br><strong>失败详情:</strong>";
     failedRecords.value.forEach(record => {
-      resultMessage += `<br>用户 （${record.user}）: ${record.reason}`;
+      resultMessage += `<br>用户 （${record.user}）: <br>${record.reason}`;
     });
   }
   
