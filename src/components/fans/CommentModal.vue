@@ -3,7 +3,13 @@ import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { ElLoading, ElMessage, ElMessageBox } from "element-plus";
 import { WeiboUser } from "../../views/FansDetail.vue";
-import CommonMessageList from "./CommonMessageList.vue";
+// 移除 CommonMessageList 导入
+// import CommonMessageList from "./CommonMessageList.vue";
+
+interface CommonMessage {
+  id: number;
+  content: string;
+}
 
 const props = defineProps({
   visible: {
@@ -17,6 +23,10 @@ const props = defineProps({
   cookie: {
     type: String,
     required: true
+  },
+  commonMessages: {
+    type: Array as () => CommonMessage[],
+    default: () => []
   }
 });
 
@@ -35,16 +45,16 @@ const showCommentProgress = ref<boolean>(false);
 // 添加失败记录数组
 const failedRecords = ref<{user: string, reason: string}[]>([]);
 
-// 常用评论内容
-const commonComments = [
-  { id: 1, content: "感谢关注，我会持续更新优质内容！" },
-  { id: 2, content: "新内容已更新，欢迎查看！" },
-  { id: 3, content: "谢谢支持，我会继续努力！" },
-];
-
 // 使用常用评论内容
 function useCommonComment(content: string): void {
   commentContent.value = content;
+}
+
+// 选择常用评论
+function handleSelectComment(content: string): void {
+  if (content) {
+    commentContent.value = content;
+  }
 }
 
 // 发送评论
@@ -117,13 +127,13 @@ async function sendComment(): Promise<void> {
   emit('update:visible', false);
 
   // 显示结果
-  let resultMessage = `批量评论完成\n成功: ${commentSuccess.value}\n失败: ${commentFailed.value}`;
+  let resultMessage = `批量评论完成<br>成功: ${commentSuccess.value}<br>失败: ${commentFailed.value}`;
   
   // 如果有失败记录，添加详细信息
   if (failedRecords.value.length > 0) {
-    resultMessage += "\n\n失败详情:";
+    resultMessage += "<br><br><strong>失败详情:</strong>";
     failedRecords.value.forEach(record => {
-      resultMessage += `\n用户 ${record.user}: ${record.reason}`;
+      resultMessage += `<br>用户 （${record.user}）: ${record.reason}`;
     });
   }
   
@@ -133,6 +143,7 @@ async function sendComment(): Promise<void> {
     {
       confirmButtonText: "确定",
       type: commentFailed.value > 0 ? "warning" : "success",
+      dangerouslyUseHTMLString: true, // 允许渲染HTML内容
     }
   );
   
@@ -172,11 +183,19 @@ function removeTarget(userId: string | number): void {
       </el-form-item>
 
       <el-form-item label="常用评论:">
-        <CommonMessageList 
-          title="评论" 
-          :initialMessages="commonComments"
-          @use-message="useCommonComment"
-        />
+        <!-- 替换为下拉选择框 -->
+        <el-select 
+          placeholder="选择常用评论" 
+          style="width: 100%"
+          @change="handleSelectComment"
+        >
+          <el-option 
+            v-for="message in commonMessages" 
+            :key="message.id" 
+            :label="message.content" 
+            :value="message.content"
+          />
+        </el-select>
       </el-form-item>
 
       <el-form-item label="评论内容:">

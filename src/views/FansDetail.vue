@@ -11,6 +11,7 @@ import ActionBar from "../components/fans/ActionBar.vue";
 import FanCard from "../components/fans/FanCard.vue";
 import MessageModal from "../components/fans/MessageModal.vue";
 import CommentModal from "../components/fans/CommentModal.vue";
+import EditCommonMessagesModal from "../components/fans/EditCommonMessagesModal.vue";
 
 // 定义用户类型接口
 interface WeiboUser {
@@ -42,6 +43,13 @@ const currentPage = ref<number>(1);
 const uid = ref<string>("6005682439");
 const cookie = ref<string>(apiCookie); // 添加 cookie 变量，默认使用 apiCookie
 
+// 统一的常用语列表
+const commonMessages = ref<{id: number, content: string}[]>([
+  { id: 1, content: "感谢关注，我会持续更新优质内容！" },
+  { id: 2, content: "新内容已更新，欢迎查看！" },
+  { id: 3, content: "有任何问题都可以随时联系我哦~" },
+]);
+
 // 选择状态管理
 const selectedFans = reactive<Set<string | number>>(new Set());
 const selectAll = ref<boolean>(false);
@@ -54,8 +62,16 @@ const messageTargets = ref<WeiboUser[]>([]);
 const showCommentModal = ref<boolean>(false);
 const commentTargets = ref<WeiboUser[]>([]);
 
+// 常用语编辑弹窗 - 只保留一个
+const showEditMessagesModal = ref<boolean>(false);
+
 // 顶部查询区域折叠状态
-const paramsCardCollapsed = ref<boolean>(true);
+const paramsCardCollapsed = ref<boolean>(false);
+
+// 打开编辑常用语弹窗 - 只保留一个函数
+function openEditMessagesModal(): void {
+  showEditMessagesModal.value = true;
+}
 
 // 加载粉丝数据
 async function loadFans(): Promise<void> {
@@ -108,7 +124,6 @@ function openMessageModal(): void {
     ElMessage.warning("请至少选择一位粉丝");
     return;
   }
-console.log(111);
 
   messageTargets.value = fansData.value.users.filter((user) =>
     selectedFans.has(user.id)
@@ -173,6 +188,7 @@ loadFans();
           @toggle-select-all="toggleSelectAll"
           @open-message-modal="openMessageModal"
           @open-comment-modal="openCommentModal"
+          @edit-common-messages="openEditMessagesModal"
         />
       </el-header>
 
@@ -218,6 +234,7 @@ loadFans();
       v-model:visible="showMessageModal"
       :targets="messageTargets"
       :cookie="cookie"
+      :commonMessages="commonMessages"
       @remove-target="(userId) => selectedFans.delete(userId)"
     />
 
@@ -226,7 +243,15 @@ loadFans();
       v-model:visible="showCommentModal"
       :targets="commentTargets"
       :cookie="cookie"
+      :commonMessages="commonMessages"
       @remove-target="(userId) => selectedFans.delete(userId)"
+    />
+      
+    <!-- 只保留一个编辑常用语弹窗 -->
+    <EditCommonMessagesModal
+      v-model:visible="showEditMessagesModal"
+      v-model:messages="commonMessages" 
+      title="常用语"
     />
   </main>
 </template>

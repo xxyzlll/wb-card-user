@@ -16,10 +16,14 @@ const props = defineProps({
   initialMessages: {
     type: Array as () => CommonMessage[],
     default: () => []
+  },
+  readonly: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['use-message']);
+const emit = defineEmits(['use-message', 'edit-messages']);
 
 // 常用消息内容管理
 const commonMessages = ref<CommonMessage[]>(props.initialMessages);
@@ -30,6 +34,11 @@ const editingContent = ref<string>("");
 // 使用常用消息内容
 function useMessage(content: string): void {
   emit('use-message', content);
+}
+
+// 触发编辑常用消息事件
+function editMessages(): void {
+  emit('edit-messages');
 }
 
 // 添加常用消息内容
@@ -105,78 +114,101 @@ function cancelEditMessage(): void {
 
 <template>
   <div class="common-messages">
+    <!-- 只读模式下显示编辑按钮 -->
+    <div v-if="readonly" class="edit-button-container">
+      <el-button type="primary" size="small" @click="editMessages" color="#ff9800">
+        <el-icon><edit /></el-icon> 编辑常用语
+      </el-button>
+    </div>
+    
     <div
       v-for="message in commonMessages"
       :key="message.id"
       class="common-message-item"
     >
-      <template v-if="editingMessageId === message.id">
-        <el-input
-          v-model="editingContent"
-          type="textarea"
-          :rows="2"
-          class="edit-message-input"
-        />
-        <div class="edit-actions">
-          <el-button
-            type="primary"
-            size="small"
-            @click="saveEditMessage"
-            color="#ff9800"
-            >保存</el-button
-          >
-          <el-button size="small" @click="cancelEditMessage"
-            >取消</el-button
-          >
-        </div>
-      </template>
-
-      <template v-else>
+      <!-- 只读模式 -->
+      <template v-if="readonly">
         <div
           class="message-content"
           @click="useMessage(message.content)"
         >
           {{ message.content }}
         </div>
-        <div class="message-actions">
-          <el-button
-            type="primary"
-            size="small"
-            circle
-            @click="startEditMessage(message)"
-            color="#ff9800"
+      </template>
+      
+      <!-- 编辑模式 -->
+      <template v-else>
+        <template v-if="editingMessageId === message.id">
+          <el-input
+            v-model="editingContent"
+            type="textarea"
+            :rows="2"
+            class="edit-message-input"
+          />
+          <div class="edit-actions">
+            <el-button
+              type="primary"
+              size="small"
+              @click="saveEditMessage"
+              color="#ff9800"
+              >保存</el-button
+            >
+            <el-button size="small" @click="cancelEditMessage"
+              >取消</el-button
+            >
+          </div>
+        </template>
+
+        <template v-else>
+          <div
+            class="message-content"
+            @click="useMessage(message.content)"
           >
-            <el-icon><edit /></el-icon>
-          </el-button>
-          <el-button
-            type="danger"
-            size="small"
-            circle
-            @click="deleteCommonMessage(message.id)"
-          >
-            <el-icon><delete /></el-icon>
-          </el-button>
-        </div>
+            {{ message.content }}
+          </div>
+          <div class="message-actions">
+            <el-button
+              type="primary"
+              size="small"
+              circle
+              @click="startEditMessage(message)"
+              color="#ff9800"
+            >
+              <el-icon><edit /></el-icon>
+            </el-button>
+            <el-button
+              type="danger"
+              size="small"
+              circle
+              @click="deleteCommonMessage(message.id)"
+            >
+              <el-icon><delete /></el-icon>
+            </el-button>
+          </div>
+        </template>
       </template>
     </div>
 
-    <el-divider content-position="center">添加常用{{ title }}</el-divider>
+    <!-- 非只读模式下显示添加功能 -->
+    <template v-if="!readonly">
+      <el-divider content-position="center">添加常用{{ title }}</el-divider>
 
-    <div class="add-common-message">
-      <el-input
-        v-model="newMessageContent"
-        type="textarea"
-        :rows="2"
-        :placeholder="`输入新的常用${title}内容...`"
-      />
-      <el-button
-        type="primary"
-        @click="addCommonMessage"
-        color="#ff9800"
-      >
-        <el-icon><plus /></el-icon> 添加
-      </el-button>
-    </div>
+      <div class="add-common-message">
+        <el-input
+          v-model="newMessageContent"
+          type="textarea"
+          :rows="2"
+          :placeholder="`输入新的常用${title}内容...`"
+        />
+        <el-button
+          type="primary"
+          @click="addCommonMessage"
+          color="#ff9800"
+        >
+          <el-icon><plus /></el-icon> 添加
+        </el-button>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -184,6 +216,12 @@ function cancelEditMessage(): void {
 /* 常用消息内容样式 */
 .common-messages {
   margin-bottom: 20px;
+}
+
+.edit-button-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
 }
 
 .common-message-item {

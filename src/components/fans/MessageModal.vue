@@ -3,7 +3,13 @@ import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { ElLoading, ElMessage, ElMessageBox } from "element-plus";
 import { WeiboUser } from "../../views/FansDetail.vue";
-import CommonMessageList from "./CommonMessageList.vue";
+// 移除 CommonMessageList 导入
+// import CommonMessageList from "./CommonMessageList.vue";
+
+interface CommonMessage {
+  id: number;
+  content: string;
+}
 
 const props = defineProps({
   visible: {
@@ -17,6 +23,10 @@ const props = defineProps({
   cookie: {
     type: String,
     required: true
+  },
+  commonMessages: {
+    type: Array as () => CommonMessage[],
+    default: () => []
   }
 });
 
@@ -35,16 +45,16 @@ const showMessageProgress = ref<boolean>(false);
 // 添加失败记录数组
 const failedRecords = ref<{user: string, reason: string}[]>([]);
 
-// 常用私信内容
-const commonMessages = [
-  { id: 1, content: "感谢关注，我会持续更新优质内容！" },
-  { id: 2, content: "新内容已更新，欢迎查看！" },
-  { id: 3, content: "有任何问题都可以随时私信我哦~" },
-];
-
 // 使用常用私信内容
 function useCommonMessage(content: string): void {
   messageContent.value = content;
+}
+
+// 选择常用私信
+function handleSelectMessage(content: string): void {
+  if (content) {
+    messageContent.value = content;
+  }
 }
 
 // 发送私信
@@ -178,11 +188,19 @@ function removeTarget(userId: string | number): void {
       </el-form-item>
 
       <el-form-item label="常用私信:">
-        <CommonMessageList 
-          title="私信" 
-          :initialMessages="commonMessages"
-          @use-message="useCommonMessage"
-        />
+        <!-- 替换为下拉选择框 -->
+        <el-select 
+          placeholder="选择常用私信" 
+          style="width: 100%"
+          @change="handleSelectMessage"
+        >
+          <el-option 
+            v-for="message in commonMessages" 
+            :key="message.id" 
+            :label="message.content" 
+            :value="message.content"
+          />
+        </el-select>
       </el-form-item>
 
       <el-form-item label="私信内容:">

@@ -16,7 +16,8 @@ const emit = defineEmits([
   'update:select-all',
   'toggle-select-all',
   'open-message-modal',
-  'open-comment-modal'
+  'open-comment-modal',
+  'edit-common-messages'
 ]);
 
 function updateSelectAll(value: boolean) {
@@ -57,6 +58,14 @@ function updateSelectAll(value: boolean) {
       >
         <el-icon><document /></el-icon> 批量评论
       </el-button>
+      
+      <!-- 添加编辑常用语按钮 -->
+      <el-button
+        type="info"
+        @click="emit('edit-common-messages')"
+      >
+        <el-icon><edit /></el-icon> 编辑常用语
+      </el-button>
     </div>
   </div>
 </template>
@@ -83,5 +92,6 @@ function updateSelectAll(value: boolean) {
 .action-buttons {
   display: flex;
   gap: 10px;
+  align-items: center;
 }
 </style>
