@@ -1,36 +1,48 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from "vue";
-
+import { invoke } from "@tauri-apps/api/core";
 const props = defineProps({
   selectAll: {
     type: Boolean,
-    default: false
+    default: false,
   },
   selectedCount: {
     type: Number,
-    default: 0
-  }
+    default: 0,
+  },
 });
 
 const emit = defineEmits([
-  'update:select-all',
-  'toggle-select-all',
-  'open-message-modal',
-  'open-comment-modal',
-  'edit-common-messages'
+  "update:select-all",
+  "toggle-select-all",
+  "open-message-modal",
+  "open-comment-modal",
+  "edit-common-messages",
 ]);
 
+// 获取登录二维码
+async function getLoginQRCode() {
+  try {
+    const qrcodeData = await invoke("get_login_qrcode", { size: 180 });
+    console.log("二维码数据:", qrcodeData);
+    // 处理二维码数据，例如显示二维码图片
+    // qrcodeData 可能包含 qrid 和 image 等字段
+  } catch (error) {
+    console.error("获取二维码失败:", error);
+  }
+}
+
 function updateSelectAll(value: boolean) {
-  emit('update:select-all', value);
-  emit('toggle-select-all');
+  emit("update:select-all", value);
+  emit("toggle-select-all");
 }
 </script>
 
 <template>
   <div class="action-bar">
     <div class="selection-info">
-      <el-checkbox 
-        :model-value="selectAll" 
+      <el-checkbox
+        :model-value="selectAll"
         @update:modelValue="updateSelectAll"
       >
         全选
@@ -58,14 +70,15 @@ function updateSelectAll(value: boolean) {
       >
         <el-icon><document /></el-icon> 批量评论
       </el-button>
-      
+
       <!-- 添加编辑常用语按钮 -->
-      <el-button
-        type="info"
-        @click="emit('edit-common-messages')"
-      >
+      <el-button type="info" @click="emit('edit-common-messages')">
         <el-icon><edit /></el-icon> 编辑常用语
       </el-button>
+
+      <!-- <el-button type="primary" @click="getLoginQRCode">
+        <el-icon><edit /></el-icon> 获取二维码
+      </el-button> -->
     </div>
   </div>
 </template>
