@@ -89,7 +89,7 @@ const commentTargets = ref<WeiboUser[]>([]);
 const showEditMessagesModal = ref<boolean>(false);
 
 // 顶部查询区域折叠状态
-const paramsCardCollapsed = ref<boolean>(false);
+const paramsCardCollapsed = ref<boolean>(true);
 
 // 打开编辑常用语弹窗 - 只保留一个函数
 function openEditMessagesModal(): void {

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from "vue";
 import { WeiboUser } from "../../views/FansDetail.vue";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { ElMessage } from "element-plus";
 
 const props = defineProps({
   user: {
@@ -14,6 +16,29 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['toggle-select']);
+
+// 处理点击用户卡片事件
+async function handleUserClick() {
+  try {
+    // 构建微博用户链接
+    const userLink = `https://weibo.com/u/${props.user.id}`;
+    
+    // 打开网页
+    await openUrl(userLink);
+    
+    // 显示成功消息
+    ElMessage.success({
+      message: `正在打开用户主页: ${props.user.screen_name}`,
+      duration: 2000
+    });
+  } catch (error) {
+    console.error("打开网页失败:", error);
+    ElMessage.error({
+      message: "打开网页失败，请重试",
+      duration: 2000
+    });
+  }
+}
 </script>
 
 <template>
@@ -32,7 +57,7 @@ const emit = defineEmits(['toggle-select']);
         class="avatar"
       />
 
-      <div class="user-info">
+      <div class="user-info clickable-area" @click="handleUserClick">
         <h3 class="username">{{ user.screen_name }}</h3>
         <p class="bio">
           {{ user.description || "这个人很懒，什么都没写" }}
@@ -95,5 +120,17 @@ const emit = defineEmits(['toggle-select']);
 .stats {
   display: flex;
   gap: 10px;
+}
+
+/* 添加可点击区域样式 */
+.clickable-area {
+  cursor: pointer;
+  transition: background-color 0.2s;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.clickable-area:hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 </style>
