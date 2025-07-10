@@ -9,8 +9,11 @@ import { ElLoading, ElMessage, ElMessageBox } from "element-plus";
 import ParamsCard from "../components/fans/ParamsCard.vue";
 import ActionBar from "../components/fans/ActionBar.vue";
 import FanCard from "../components/fans/FanCard.vue";
-import MessageModal from "../components/fans/MessageModal.vue";
-import CommentModal from "../components/fans/CommentModal.vue";
+// 移除原来的两个模态框组件导入
+// import MessageModal from "../components/fans/MessageModal.vue";
+// import CommentModal from "../components/fans/CommentModal.vue";
+// 导入新的合并后的模态框组件
+import InteractionModal from "../components/fans/InteractionModal.vue";
 import EditCommonMessagesModal from "../components/fans/EditCommonMessagesModal.vue";
 
 // 定义用户类型接口
@@ -250,24 +253,25 @@ loadFans();
     </el-container>
 
     <!-- 私信模态框组件 -->
-    <MessageModal
+    <InteractionModal
       v-model:visible="showMessageModal"
       :targets="messageTargets"
       :cookie="cookie"
       :commonMessages="commonMessages"
+      type="message"
       @remove-target="(userId) => selectedFans.delete(userId)"
     />
 
-    <!-- 评论模态框组件 -->
-    <CommentModal
+    <InteractionModal
       v-model:visible="showCommentModal"
       :targets="commentTargets"
       :cookie="cookie"
       :commonMessages="commonMessages"
+      type="comment"
       @remove-target="(userId) => selectedFans.delete(userId)"
     />
 
-    <!-- 只保留一个编辑常用语弹窗 -->
+    <!-- 常用语编辑弹窗保持不变 -->
     <EditCommonMessagesModal
       v-model:visible="showEditMessagesModal"
       v-model:messages="commonMessages"
