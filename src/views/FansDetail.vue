@@ -69,11 +69,15 @@ const selectedGender = ref<string>("f");
 // 添加历史状态管理
 const messagedUsers = ref<Set<string | number>>(new Set());
 const commentedUsers = ref<Set<string | number>>(new Set());
+// 新增：评论失败用户状态
+const commentFailedUsers = ref<Set<string | number>>(new Set());
 
 // 加载历史状态
 function loadHistoryStatus(): void {
   messagedUsers.value = LocalStorage.getMessagedUsers();
   commentedUsers.value = LocalStorage.getCommentedUsers();
+  // 新增：加载评论失败状态
+  commentFailedUsers.value = LocalStorage.getCommentFailedUsers();
 }
 
 // 检查用户是否已私信
@@ -84,6 +88,61 @@ function isUserMessaged(userId: string | number): boolean {
 // 检查用户是否已评论
 function isUserCommented(userId: string | number): boolean {
   return commentedUsers.value.has(userId);
+}
+
+// 新增：检查用户是否评论失败
+function isUserCommentFailed(userId: string | number): boolean {
+  return commentFailedUsers.value.has(userId);
+}
+
+// 修改：全选未评论用户，排除评论失败的用户
+function selectAllUncommentedUsers(): void {
+  const uncommentedUsers = filteredFans.value.filter(
+    (user) => !isUserCommented(user.id) && user.statuses_count > 0 && !isUserCommentFailed(user.id)
+  );
+  uncommentedUsers.forEach((user) => {
+    selectedFans.add(user.id);
+  });
+  // 检查是否已全选
+  if (selectedFans.size === filteredFans.value.length) {
+    selectAll.value = true;
+  }
+}
+
+// 监听私信和评论成功事件，更新本地状态
+function onInteractionSuccess(
+  type: "message" | "comment",
+  users: WeiboUser[],
+  content: string
+): void {
+  users.forEach((user) => {
+    if (type === "message") {
+      LocalStorage.addMessageRecord(
+        user.id,
+        user.screen_name,
+        user.profile_image_url,
+        content
+      );
+      messagedUsers.value.add(user.id);
+    } else {
+      LocalStorage.addCommentRecord(
+        user.id,
+        user.screen_name,
+        user.profile_image_url,
+        content
+      );
+      commentedUsers.value.add(user.id);
+      // 评论成功时移除失败状态
+      commentFailedUsers.value.delete(user.id);
+    }
+  });
+}
+
+// 新增：监听评论失败事件
+function onInteractionFailed(users: WeiboUser[]): void {
+  users.forEach((user) => {
+    commentFailedUsers.value.add(user.id);
+  });
 }
 
 const uid = computed(() => {
@@ -108,7 +167,7 @@ const filteredFans = computed(() => {
 const commonMessages = ref<{ id: number; content: string }[]>([
   { id: 1, content: "感谢关注，我会持续更新优质内容！" },
   { id: 2, content: "新内容已更新，欢迎查看！" },
-  { id: 3, content: "有任何问题都可以随时联系我哦~" },
+  { id: 3, content: "可以互关吗宝宝[开学季]" },
 ]);
 
 // 选择状态管理
@@ -129,19 +188,6 @@ function selectAllUnmessagedUsers(): void {
   }
 }
 
-// 新增：全选未评论用户
-function selectAllUncommentedUsers(): void {
-  const uncommentedUsers = filteredFans.value.filter(
-    (user) => !isUserCommented(user.id)
-  );
-  uncommentedUsers.forEach((user) => {
-    selectedFans.add(user.id);
-  });
-  // 检查是否已全选
-  if (selectedFans.size === filteredFans.value.length) {
-    selectAll.value = true;
-  }
-}
 
 // 私信相关
 const showMessageModal = ref<boolean>(false);
@@ -257,32 +303,32 @@ onMounted(() => {
   loadHistoryStatus();
 });
 
-// 监听私信和评论成功事件，更新本地状态
-function onInteractionSuccess(
-  type: "message" | "comment",
-  users: WeiboUser[],
-  content: string
-): void {
-  users.forEach((user) => {
-    if (type === "message") {
-      LocalStorage.addMessageRecord(
-        user.id,
-        user.screen_name,
-        user.profile_image_url,
-        content
-      );
-      messagedUsers.value.add(user.id);
-    } else {
-      LocalStorage.addCommentRecord(
-        user.id,
-        user.screen_name,
-        user.profile_image_url,
-        content
-      );
-      commentedUsers.value.add(user.id);
-    }
-  });
-}
+// 删除这个重复的函数定义（第307-325行）
+// function onInteractionSuccess(
+//   type: "message" | "comment",
+//   users: WeiboUser[],
+//   content: string
+// ): void {
+//   users.forEach((user) => {
+//     if (type === "message") {
+//       LocalStorage.addMessageRecord(
+//         user.id,
+//         user.screen_name,
+//         user.profile_image_url,
+//         content
+//       );
+//       messagedUsers.value.add(user.id);
+//     } else {
+//       LocalStorage.addCommentRecord(
+//         user.id,
+//         user.screen_name,
+//         user.profile_image_url,
+//         content
+//       );
+//       commentedUsers.value.add(user.id);
+//     }
+//   });
+// }
 </script>
 
 <template>
@@ -333,6 +379,7 @@ function onInteractionSuccess(
             :selected="selectedFans.has(user.id)"
             :is-messaged="isUserMessaged(user.id)"
             :is-commented="isUserCommented(user.id)"
+            :is-comment-failed="isUserCommentFailed(user.id)"
             @toggle-select="toggleSelect"
           />
         </template>
@@ -373,6 +420,7 @@ function onInteractionSuccess(
       "
     />
 
+    <!-- 评论模态框 -->
     <InteractionModal
       v-model:visible="showCommentModal"
       :targets="commentTargets"
@@ -383,6 +431,7 @@ function onInteractionSuccess(
       @interaction-success="
         (users, content) => onInteractionSuccess('comment', users, content)
       "
+      @interaction-failed="onInteractionFailed"
     />
 
     <!-- 常用语编辑弹窗保持不变 -->

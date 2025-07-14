@@ -12,6 +12,8 @@ export class LocalStorage {
   private static readonly COMMENT_HISTORY_KEY = 'weibo_comment_history';
   private static readonly MESSAGED_USERS_KEY = 'weibo_messaged_users';
   private static readonly COMMENTED_USERS_KEY = 'weibo_commented_users';
+  // 新增：评论失败用户ID列表
+  private static readonly COMMENT_FAILED_USERS_KEY = 'weibo_comment_failed_users';
 
   // 获取已私信用户ID列表
   static getMessagedUsers(): Set<string | number> {
@@ -23,6 +25,26 @@ export class LocalStorage {
   static getCommentedUsers(): Set<string | number> {
     const data = localStorage.getItem(this.COMMENTED_USERS_KEY);
     return new Set(data ? JSON.parse(data) : []);
+  }
+
+  // 新增：获取评论失败用户ID列表
+  static getCommentFailedUsers(): Set<string | number> {
+    const data = localStorage.getItem(this.COMMENT_FAILED_USERS_KEY);
+    return new Set(data ? JSON.parse(data) : []);
+  }
+
+  // 新增：添加评论失败用户
+  static addCommentFailedUser(userId: string | number): void {
+    const failedUsers = this.getCommentFailedUsers();
+    failedUsers.add(userId);
+    localStorage.setItem(this.COMMENT_FAILED_USERS_KEY, JSON.stringify([...failedUsers]));
+  }
+
+  // 新增：移除评论失败用户（当重新评论成功时）
+  static removeCommentFailedUser(userId: string | number): void {
+    const failedUsers = this.getCommentFailedUsers();
+    failedUsers.delete(userId);
+    localStorage.setItem(this.COMMENT_FAILED_USERS_KEY, JSON.stringify([...failedUsers]));
   }
 
   // 添加私信记录
@@ -51,8 +73,11 @@ export class LocalStorage {
     localStorage.setItem(this.MESSAGE_HISTORY_KEY, JSON.stringify(history));
   }
 
-  // 添加评论记录
+  // 修改：添加评论记录时移除失败状态
   static addCommentRecord(userId: string | number, userName: string, userAvatar: string, content: string): void {
+    // 移除评论失败状态（如果存在）
+    this.removeCommentFailedUser(userId);
+    
     // 添加到已评论用户列表
     const commentedUsers = this.getCommentedUsers();
     commentedUsers.add(userId);
@@ -95,27 +120,21 @@ export class LocalStorage {
     localStorage.removeItem(this.MESSAGED_USERS_KEY);
   }
 
-  // 清空评论历史
+  // 修改：清空评论历史时也清空失败状态
   static clearCommentHistory(): void {
     localStorage.removeItem(this.COMMENT_HISTORY_KEY);
     localStorage.removeItem(this.COMMENTED_USERS_KEY);
+    localStorage.removeItem(this.COMMENT_FAILED_USERS_KEY);
   }
 
-  // 删除单条私信记录
-  static removeMessageRecord(userId: string | number): void {
-    const messagedUsers = this.getMessagedUsers();
-    messagedUsers.delete(userId);
-    localStorage.setItem(this.MESSAGED_USERS_KEY, JSON.stringify([...messagedUsers]));
-
-    const history = this.getMessageHistory().filter(record => record.userId !== userId);
-    localStorage.setItem(this.MESSAGE_HISTORY_KEY, JSON.stringify(history));
-  }
-
-  // 删除单条评论记录
+  // 修改：删除单条评论记录时也移除失败状态
   static removeCommentRecord(userId: string | number): void {
     const commentedUsers = this.getCommentedUsers();
     commentedUsers.delete(userId);
     localStorage.setItem(this.COMMENTED_USERS_KEY, JSON.stringify([...commentedUsers]));
+
+    // 移除评论失败状态
+    this.removeCommentFailedUser(userId);
 
     const history = this.getCommentHistory().filter(record => record.userId !== userId);
     localStorage.setItem(this.COMMENT_HISTORY_KEY, JSON.stringify(history));

@@ -3,6 +3,7 @@ import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { ElLoading, ElMessage, ElMessageBox } from "element-plus";
 import { WeiboUser } from "../../views/FansDetail.vue";
+import { LocalStorage } from "../../utils/storage";
 
 interface CommonMessage {
   id: number;
@@ -93,6 +94,7 @@ async function send(): Promise<void> {
   failedRecords.value = [];
   
   const successfulUsers: WeiboUser[] = [];
+  const failedUsers: WeiboUser[] = [];
 
   // 创建加载状态
   const loading = ElLoading.service({
@@ -130,9 +132,15 @@ async function send(): Promise<void> {
       successfulUsers.push(user);
     } catch (error: any) {
       failed.value++;
+      failedUsers.push(user);
       
       let errorMessage = error;
       console.error(`${props.type === "message" ? "私信" : "评论"}用户 ${user.screen_name} 失败: ${errorMessage}`);
+      
+      // 如果是评论失败，记录失败状态
+      if (props.type === "comment") {
+        LocalStorage.addCommentFailedUser(user.id);
+      }
       
       failedRecords.value.push({
         user: user.screen_name,
@@ -157,6 +165,11 @@ async function send(): Promise<void> {
   // 触发成功回调，传递成功的用户列表和内容
   if (successfulUsers.length > 0) {
     emit('interaction-success', successfulUsers, content.value);
+  }
+  
+  // 触发失败回调，传递失败的用户列表
+  if (failedUsers.length > 0 && props.type === "comment") {
+    emit('interaction-failed', failedUsers);
   }
 
   // 显示结果

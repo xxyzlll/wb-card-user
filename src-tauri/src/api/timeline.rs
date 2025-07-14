@@ -45,7 +45,7 @@ pub async fn fetch_user_timeline(
     println!("HTTP客户端创建完成");
 
     // 步骤1: 调用接口获取topicId
-    let search_url = format!("https://weibo.com/ajax/statuses/searchProfile?uid={}&page=1&endtime=1752076800&hasori=1&hasret=1", uid);
+    let search_url = format!("https://weibo.com/ajax/statuses/mymblog?uid={}&page=1&feature=0", uid);
     println!("请求URL: {}", search_url);
 
     let search_response = client.get(&search_url).send().await.map_err(|e| {
