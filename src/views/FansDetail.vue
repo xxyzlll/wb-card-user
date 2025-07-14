@@ -60,8 +60,11 @@ const currentPage = ref<number>(1);
 const inputUId = ref<string>("https://weibo.com/u/7526709666");
 const cookie = ref<string>(apiCookie);
 
+// 新增：总数状态
+const totalCount = ref<number>(0);
+
 // 添加性别筛选状态
-const selectedGender = ref<string>('f');
+const selectedGender = ref<string>("f");
 
 // 添加历史状态管理
 const messagedUsers = ref<Set<string | number>>(new Set());
@@ -90,12 +93,12 @@ const uid = computed(() => {
 // 添加筛选后的粉丝数据计算属性
 const filteredFans = computed(() => {
   if (!fansData.value.users) return [];
-  
-  if (selectedGender.value === 'all') {
+
+  if (selectedGender.value === "all") {
     return fansData.value.users;
   }
-  
-  return fansData.value.users.filter(user => {
+
+  return fansData.value.users.filter((user) => {
     // 根据微博API，性别字段可能是 'f'(女), 'm'(男), 'n'(未知)
     return user.gender === selectedGender.value;
   });
@@ -114,8 +117,10 @@ const selectAll = ref<boolean>(false);
 
 // 新增：全选未私信用户
 function selectAllUnmessagedUsers(): void {
-  const unmessagedUsers = filteredFans.value.filter(user => !isUserMessaged(user.id));
-  unmessagedUsers.forEach(user => {
+  const unmessagedUsers = filteredFans.value.filter(
+    (user) => !isUserMessaged(user.id)
+  );
+  unmessagedUsers.forEach((user) => {
     selectedFans.add(user.id);
   });
   // 检查是否已全选
@@ -126,8 +131,10 @@ function selectAllUnmessagedUsers(): void {
 
 // 新增：全选未评论用户
 function selectAllUncommentedUsers(): void {
-  const uncommentedUsers = filteredFans.value.filter(user => !isUserCommented(user.id));
-  uncommentedUsers.forEach(user => {
+  const uncommentedUsers = filteredFans.value.filter(
+    (user) => !isUserCommented(user.id)
+  );
+  uncommentedUsers.forEach((user) => {
     selectedFans.add(user.id);
   });
   // 检查是否已全选
@@ -165,6 +172,9 @@ async function loadFans(): Promise<void> {
       uid: uid.value,
     });
     fansData.value = data;
+    // 更新总数
+    totalCount.value =
+      Number(data.total_number) > 1000 ? 999 : Number(data.total_number);
     loading.value = false;
   } catch (err) {
     console.error("请求出错:", err);
@@ -248,13 +258,27 @@ onMounted(() => {
 });
 
 // 监听私信和评论成功事件，更新本地状态
-function onInteractionSuccess(type: 'message' | 'comment', users: WeiboUser[], content: string): void {
-  users.forEach(user => {
-    if (type === 'message') {
-      LocalStorage.addMessageRecord(user.id, user.screen_name, user.profile_image_url, content);
+function onInteractionSuccess(
+  type: "message" | "comment",
+  users: WeiboUser[],
+  content: string
+): void {
+  users.forEach((user) => {
+    if (type === "message") {
+      LocalStorage.addMessageRecord(
+        user.id,
+        user.screen_name,
+        user.profile_image_url,
+        content
+      );
       messagedUsers.value.add(user.id);
     } else {
-      LocalStorage.addCommentRecord(user.id, user.screen_name, user.profile_image_url, content);
+      LocalStorage.addCommentRecord(
+        user.id,
+        user.screen_name,
+        user.profile_image_url,
+        content
+      );
       commentedUsers.value.add(user.id);
     }
   });
@@ -325,7 +349,7 @@ function onInteractionSuccess(type: 'message' | 'comment', users: WeiboUser[], c
           background
           layout="prev, pager, next"
           :current-page="currentPage"
-          :total="1000000"
+          :total="totalCount"
           @current-change="
             (page) => {
               currentPage = page;
@@ -344,7 +368,9 @@ function onInteractionSuccess(type: 'message' | 'comment', users: WeiboUser[], c
       :commonMessages="commonMessages"
       type="message"
       @remove-target="(userId) => selectedFans.delete(userId)"
-      @interaction-success="(users, content) => onInteractionSuccess('message', users, content)"
+      @interaction-success="
+        (users, content) => onInteractionSuccess('message', users, content)
+      "
     />
 
     <InteractionModal
@@ -354,7 +380,9 @@ function onInteractionSuccess(type: 'message' | 'comment', users: WeiboUser[], c
       :commonMessages="commonMessages"
       type="comment"
       @remove-target="(userId) => selectedFans.delete(userId)"
-      @interaction-success="(users, content) => onInteractionSuccess('comment', users, content)"
+      @interaction-success="
+        (users, content) => onInteractionSuccess('comment', users, content)
+      "
     />
 
     <!-- 常用语编辑弹窗保持不变 -->
