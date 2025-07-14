@@ -59,7 +59,7 @@ function extractWeiboId(input: string) {
 const fansData = ref<FansData>({ users: [] });
 const loading = ref<boolean>(false);
 const currentPage = ref<number>(1);
-const inputUId = ref<string>("6005682439");
+const inputUId = ref<string>("https://weibo.com/u/7526709666");
 const cookie = ref<string>(apiCookie); // 添加 cookie 变量，默认使用 apiCookie
 
 const uid = computed(() => {
