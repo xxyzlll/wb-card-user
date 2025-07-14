@@ -34,7 +34,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:visible', 'remove-target']);
+const emit = defineEmits(['update:visible', 'remove-target', 'interaction-success']);
 
 // 内容输入框
 const content = ref<string>("感谢关注，我会持续更新优质内容！");
@@ -91,6 +91,8 @@ async function send(): Promise<void> {
   failed.value = 0;
   showProgress.value = true;
   failedRecords.value = [];
+  
+  const successfulUsers: WeiboUser[] = [];
 
   // 创建加载状态
   const loading = ElLoading.service({
@@ -111,7 +113,7 @@ async function send(): Promise<void> {
           cookie: props.cookie,
           uid: user.id.toString(),
           text: content.value,
-        source: "209678993",
+          source: "209678993",
         });
         console.log(`成功发送私信给用户 ${user.screen_name}`);
       } else {
@@ -125,15 +127,13 @@ async function send(): Promise<void> {
       }
 
       success.value++;
-    } catch (error:any) {
+      successfulUsers.push(user);
+    } catch (error: any) {
       failed.value++;
       
-      // 获取错误信息
       let errorMessage = error;
-      
       console.error(`${props.type === "message" ? "私信" : "评论"}用户 ${user.screen_name} 失败: ${errorMessage}`);
       
-      // 记录失败信息
       failedRecords.value.push({
         user: user.screen_name,
         reason: errorMessage
@@ -144,7 +144,6 @@ async function send(): Promise<void> {
       ((i + 1) / props.targets.length) * 100
     );
 
-    // 添加延迟，避免频繁请求
     if (i < props.targets.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
@@ -154,6 +153,11 @@ async function send(): Promise<void> {
   loading.close();
   batchLoading.value = false;
   emit('update:visible', false);
+  
+  // 触发成功回调，传递成功的用户列表和内容
+  if (successfulUsers.length > 0) {
+    emit('interaction-success', successfulUsers, content.value);
+  }
 
   // 显示结果
   let resultMessage = `批量${props.type === "message" ? "私信" : "评论"}完成<br>成功: ${success.value}<br>失败: ${failed.value}`;
@@ -178,7 +182,7 @@ async function send(): Promise<void> {
   
   // 重置状态
   content.value = "感谢关注，我会持续更新优质内容！";
-  failedRecords.value = []; // 清空失败记录
+  failedRecords.value = [];
 }
 
 // 移除目标用户

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from "vue";
 import { WeiboUser } from "../../views/FansDetail.vue";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { ElMessage } from "element-plus";
 
 const props = defineProps({
@@ -12,6 +11,14 @@ const props = defineProps({
   selected: {
     type: Boolean,
     default: false
+  },
+  isMessaged: {
+    type: Boolean,
+    default: false
+  },
+  isCommented: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -20,13 +27,16 @@ const emit = defineEmits(['toggle-select']);
 // 处理点击用户卡片事件
 async function handleUserClick() {
   try {
-    // 构建微博用户链接
     const userLink = `https://weibo.com/u/${props.user.id}`;
     
-    // 打开网页
-    await openUrl(userLink);
+    // 在 Electron 环境中使用 window.open
+    if (window.electronAPI) {
+      window.open(userLink, '_blank');
+    } else {
+      // 浏览器环境备用方案
+      window.open(userLink, '_blank');
+    }
     
-    // 显示成功消息
     ElMessage.success({
       message: `正在打开用户主页: ${props.user.screen_name}`,
       duration: 2000
@@ -58,7 +68,33 @@ async function handleUserClick() {
       />
 
       <div class="user-info clickable-area" @click="handleUserClick">
-        <h3 class="username">{{ user.screen_name }}</h3>
+        <div class="user-header">
+          <h3 class="username">{{ user.screen_name }}</h3>
+          <!-- 添加状态标签 -->
+          <div class="status-tags">
+            <el-tag 
+              v-if="isMessaged" 
+              type="warning" 
+              size="small" 
+              effect="dark"
+              class="status-tag"
+            >
+              <el-icon><chat-line-round /></el-icon>
+              已私信
+            </el-tag>
+            <el-tag 
+              v-if="isCommented" 
+              type="success" 
+              size="small" 
+              effect="dark"
+              class="status-tag"
+            >
+              <el-icon><chat-dot-round /></el-icon>
+              已评论
+            </el-tag>
+          </div>
+        </div>
+        
         <p class="bio">
           {{ user.description || "这个人很懒，什么都没写" }}
         </p>
@@ -104,33 +140,27 @@ async function handleUserClick() {
   flex: 1;
 }
 
+.user-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
 .username {
-  margin: 0 0 5px 0;
+  margin: 0;
   font-size: 18px;
   color: #333;
 }
 
-.bio {
-  margin: 0 0 10px 0;
-  color: #666;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.stats {
+.status-tags {
   display: flex;
-  gap: 10px;
+  gap: 5px;
 }
 
-/* 添加可点击区域样式 */
-.clickable-area {
-  cursor: pointer;
-  transition: background-color 0.2s;
-  padding: 8px;
-  border-radius: 4px;
-}
-
-.clickable-area:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+.status-tag {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 </style>

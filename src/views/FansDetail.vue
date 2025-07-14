@@ -1,18 +1,15 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { apiCookie } from "../contants";
 import { useRouter } from "vue-router";
 import { ElLoading, ElMessage, ElMessageBox } from "element-plus";
+import { LocalStorage } from "../utils/storage";
 
 // 导入拆分出的组件
 import ParamsCard from "../components/fans/ParamsCard.vue";
 import ActionBar from "../components/fans/ActionBar.vue";
 import FanCard from "../components/fans/FanCard.vue";
-// 移除原来的两个模态框组件导入
-// import MessageModal from "../components/fans/MessageModal.vue";
-// import CommentModal from "../components/fans/CommentModal.vue";
-// 导入新的合并后的模态框组件
 import InteractionModal from "../components/fans/InteractionModal.vue";
 import EditCommonMessagesModal from "../components/fans/EditCommonMessagesModal.vue";
 
@@ -25,14 +22,14 @@ interface WeiboUser {
   followers_count: number;
   friends_count: number;
   statuses_count: number;
-  gender?: string; // 添加性别字段
-  [key: string]: any; // 允许其他可能的属性
+  gender?: string;
+  [key: string]: any;
 }
 
 // 定义粉丝数据接口
 interface FansData {
   users: WeiboUser[];
-  [key: string]: any; // 允许其他可能的属性
+  [key: string]: any;
 }
 
 // 导出接口供其他组件使用
@@ -61,10 +58,30 @@ const fansData = ref<FansData>({ users: [] });
 const loading = ref<boolean>(false);
 const currentPage = ref<number>(1);
 const inputUId = ref<string>("https://weibo.com/u/7526709666");
-const cookie = ref<string>(apiCookie); // 添加 cookie 变量，默认使用 apiCookie
+const cookie = ref<string>(apiCookie);
 
 // 添加性别筛选状态
-const selectedGender = ref<string>('f'); // 默认选择女性
+const selectedGender = ref<string>('f');
+
+// 添加历史状态管理
+const messagedUsers = ref<Set<string | number>>(new Set());
+const commentedUsers = ref<Set<string | number>>(new Set());
+
+// 加载历史状态
+function loadHistoryStatus(): void {
+  messagedUsers.value = LocalStorage.getMessagedUsers();
+  commentedUsers.value = LocalStorage.getCommentedUsers();
+}
+
+// 检查用户是否已私信
+function isUserMessaged(userId: string | number): boolean {
+  return messagedUsers.value.has(userId);
+}
+
+// 检查用户是否已评论
+function isUserCommented(userId: string | number): boolean {
+  return commentedUsers.value.has(userId);
+}
 
 const uid = computed(() => {
   return extractWeiboId(inputUId.value);
@@ -94,6 +111,30 @@ const commonMessages = ref<{ id: number; content: string }[]>([
 // 选择状态管理
 const selectedFans = reactive<Set<string | number>>(new Set());
 const selectAll = ref<boolean>(false);
+
+// 新增：全选未私信用户
+function selectAllUnmessagedUsers(): void {
+  const unmessagedUsers = filteredFans.value.filter(user => !isUserMessaged(user.id));
+  unmessagedUsers.forEach(user => {
+    selectedFans.add(user.id);
+  });
+  // 检查是否已全选
+  if (selectedFans.size === filteredFans.value.length) {
+    selectAll.value = true;
+  }
+}
+
+// 新增：全选未评论用户
+function selectAllUncommentedUsers(): void {
+  const uncommentedUsers = filteredFans.value.filter(user => !isUserCommented(user.id));
+  uncommentedUsers.forEach(user => {
+    selectedFans.add(user.id);
+  });
+  // 检查是否已全选
+  if (selectedFans.size === filteredFans.value.length) {
+    selectAll.value = true;
+  }
+}
 
 // 私信相关
 const showMessageModal = ref<boolean>(false);
@@ -200,16 +241,36 @@ const selectedCount = computed(() => selectedFans.size);
 
 // 初始加载
 loadFans();
+
+// 组件挂载时加载历史状态
+onMounted(() => {
+  loadHistoryStatus();
+});
+
+// 监听私信和评论成功事件，更新本地状态
+function onInteractionSuccess(type: 'message' | 'comment', users: WeiboUser[], content: string): void {
+  users.forEach(user => {
+    if (type === 'message') {
+      LocalStorage.addMessageRecord(user.id, user.screen_name, user.profile_image_url, content);
+      messagedUsers.value.add(user.id);
+    } else {
+      LocalStorage.addCommentRecord(user.id, user.screen_name, user.profile_image_url, content);
+      commentedUsers.value.add(user.id);
+    }
+  });
+}
 </script>
 
 <template>
   <main class="container">
     <el-container>
       <el-header height="auto" class="fixed-header">
+        <!-- 移除原来的返回按钮和历史页面导航按钮 -->
         <div class="header">
-          <el-button class="back-btn" @click="goBack" text>
-            <el-icon><arrow-left /></el-icon> 返回首页
-          </el-button>
+          <h2 class="page-title">
+            <el-icon><user /></el-icon>
+            粉丝管理
+          </h2>
         </div>
 
         <!-- 参数设置卡片组件 -->
@@ -228,6 +289,8 @@ loadFans();
           v-model:select-all="selectAll"
           :selected-count="selectedCount"
           @toggle-select-all="toggleSelectAll"
+          @select-all-unmessaged="selectAllUnmessagedUsers"
+          @select-all-uncommented="selectAllUncommentedUsers"
           @open-message-modal="openMessageModal"
           @open-comment-modal="openCommentModal"
           @edit-common-messages="openEditMessagesModal"
@@ -244,6 +307,8 @@ loadFans();
             :key="user.id"
             :user="user"
             :selected="selectedFans.has(user.id)"
+            :is-messaged="isUserMessaged(user.id)"
+            :is-commented="isUserCommented(user.id)"
             @toggle-select="toggleSelect"
           />
         </template>
@@ -260,7 +325,7 @@ loadFans();
           background
           layout="prev, pager, next"
           :current-page="currentPage"
-          :total="100"
+          :total="1000000"
           @current-change="
             (page) => {
               currentPage = page;
@@ -279,6 +344,7 @@ loadFans();
       :commonMessages="commonMessages"
       type="message"
       @remove-target="(userId) => selectedFans.delete(userId)"
+      @interaction-success="(users, content) => onInteractionSuccess('message', users, content)"
     />
 
     <InteractionModal
@@ -288,6 +354,7 @@ loadFans();
       :commonMessages="commonMessages"
       type="comment"
       @remove-target="(userId) => selectedFans.delete(userId)"
+      @interaction-success="(users, content) => onInteractionSuccess('comment', users, content)"
     />
 
     <!-- 常用语编辑弹窗保持不变 -->
@@ -324,32 +391,16 @@ loadFans();
   display: flex;
   align-items: center;
   margin-bottom: 20px;
-  position: relative;
 }
 
-.back-btn {
-  position: absolute;
-  left: 0;
+.page-title {
+  margin: 0;
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 16px;
-  color: #666;
+  gap: 8px;
+  color: #333;
+  font-size: 1.5rem;
 }
 
-/* 可滚动内容区域 */
-.scrollable-content {
-  overflow-y: auto;
-  padding: 0 20px;
-  background-color: #f5f7fa;
-}
-
-/* 固定底部 */
-.fixed-footer {
-  display: flex;
-  justify-content: center;
-  padding: 20px;
-  background-color: #fff;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-}
+/* 移除 back-btn 和 history-nav 相关样式 */
 </style>

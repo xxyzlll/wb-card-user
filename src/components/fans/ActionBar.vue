@@ -15,6 +15,8 @@ const props = defineProps({
 const emit = defineEmits([
   "update:select-all",
   "toggle-select-all",
+  "select-all-unmessaged",
+  "select-all-uncommented",
   "open-message-modal",
   "open-comment-modal",
   "edit-common-messages",
@@ -41,12 +43,35 @@ function updateSelectAll(value: boolean) {
 <template>
   <div class="action-bar">
     <div class="selection-info">
-      <el-checkbox
-        :model-value="selectAll"
-        @update:modelValue="updateSelectAll"
-      >
-        全选
-      </el-checkbox>
+      <div class="select-buttons">
+        <el-button
+          size="small"
+          type="primary"
+          @click="emit('select-all-unmessaged')"
+          plain
+        >
+          <el-icon><message /></el-icon>
+          全选未私信用户
+        </el-button>
+        
+        <el-button
+          size="small"
+          type="success"
+          @click="emit('select-all-uncommented')"
+          plain
+        >
+          <el-icon><document /></el-icon>
+          全选未评论用户
+        </el-button>
+        
+        <el-checkbox
+          :model-value="selectAll"
+          @update:modelValue="updateSelectAll"
+        >
+          全选
+        </el-checkbox>
+      </div>
+      
       <el-tag v-if="selectedCount > 0" type="warning" effect="dark">
         已选择 {{ selectedCount }} 位粉丝
       </el-tag>
@@ -75,10 +100,6 @@ function updateSelectAll(value: boolean) {
       <el-button type="info" @click="emit('edit-common-messages')">
         <el-icon><edit /></el-icon> 编辑常用语
       </el-button>
-
-      <!-- <el-button type="primary" @click="getLoginQRCode">
-        <el-icon><edit /></el-icon> 获取二维码
-      </el-button> -->
     </div>
   </div>
 </template>
@@ -100,6 +121,12 @@ function updateSelectAll(value: boolean) {
   display: flex;
   align-items: center;
   gap: 15px;
+}
+
+.select-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .action-buttons {
