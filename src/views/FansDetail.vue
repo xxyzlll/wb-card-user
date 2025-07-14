@@ -25,6 +25,7 @@ interface WeiboUser {
   followers_count: number;
   friends_count: number;
   statuses_count: number;
+  gender?: string; // 添加性别字段
   [key: string]: any; // 允许其他可能的属性
 }
 
@@ -62,8 +63,25 @@ const currentPage = ref<number>(1);
 const inputUId = ref<string>("https://weibo.com/u/7526709666");
 const cookie = ref<string>(apiCookie); // 添加 cookie 变量，默认使用 apiCookie
 
+// 添加性别筛选状态
+const selectedGender = ref<string>('f'); // 默认选择女性
+
 const uid = computed(() => {
   return extractWeiboId(inputUId.value);
+});
+
+// 添加筛选后的粉丝数据计算属性
+const filteredFans = computed(() => {
+  if (!fansData.value.users) return [];
+  
+  if (selectedGender.value === 'all') {
+    return fansData.value.users;
+  }
+  
+  return fansData.value.users.filter(user => {
+    // 根据微博API，性别字段可能是 'f'(女), 'm'(男), 'n'(未知)
+    return user.gender === selectedGender.value;
+  });
 });
 
 // 统一的常用语列表
@@ -114,11 +132,11 @@ async function loadFans(): Promise<void> {
   }
 }
 
-// 选择/取消选择所有粉丝
+// 选择/取消选择所有粉丝 - 修改为使用筛选后的数据
 function toggleSelectAll(): void {
   if (selectAll.value) {
     // 全选
-    fansData.value.users.forEach((user) => {
+    filteredFans.value.forEach((user) => {
       selectedFans.add(user.id);
     });
   } else {
@@ -127,7 +145,7 @@ function toggleSelectAll(): void {
   }
 }
 
-// 切换单个粉丝的选择状态
+// 切换单个粉丝的选择状态 - 修改为使用筛选后的数据
 function toggleSelect(userId: string | number): void {
   if (selectedFans.has(userId)) {
     selectedFans.delete(userId);
@@ -135,33 +153,33 @@ function toggleSelect(userId: string | number): void {
   } else {
     selectedFans.add(userId);
     // 检查是否已全选
-    if (selectedFans.size === fansData.value.users.length) {
+    if (selectedFans.size === filteredFans.value.length) {
       selectAll.value = true;
     }
   }
 }
 
-// 打开私信模态框
+// 打开私信模态框 - 修改为使用筛选后的数据
 function openMessageModal(): void {
   if (selectedFans.size === 0) {
     ElMessage.warning("请至少选择一位粉丝");
     return;
   }
 
-  messageTargets.value = fansData.value.users.filter((user) =>
+  messageTargets.value = filteredFans.value.filter((user) =>
     selectedFans.has(user.id)
   );
   showMessageModal.value = true;
 }
 
-// 打开评论模态框
+// 打开评论模态框 - 修改为使用筛选后的数据
 function openCommentModal(): void {
   if (selectedFans.size === 0) {
     ElMessage.warning("请至少选择一位粉丝");
     return;
   }
 
-  commentTargets.value = fansData.value.users.filter((user) =>
+  commentTargets.value = filteredFans.value.filter((user) =>
     selectedFans.has(user.id)
   );
   showCommentModal.value = true;
@@ -199,6 +217,7 @@ loadFans();
           v-model:uid="inputUId"
           v-model:cookie="cookie"
           v-model:collapsed="paramsCardCollapsed"
+          v-model:gender="selectedGender"
           :loading="loading"
           @refresh="loadFans"
           @toggle="toggleParamsCard"
@@ -219,9 +238,9 @@ loadFans();
       <el-main class="scrollable-content">
         <el-skeleton :rows="10" animated v-if="loading" />
 
-        <template v-else-if="fansData.users && fansData.users.length > 0">
+        <template v-else-if="filteredFans && filteredFans.length > 0">
           <FanCard
-            v-for="user in fansData.users"
+            v-for="user in filteredFans"
             :key="user.id"
             :user="user"
             :selected="selectedFans.has(user.id)"
@@ -229,7 +248,7 @@ loadFans();
           />
         </template>
 
-        <el-empty v-else description="暂无粉丝数据">
+        <el-empty v-else description="暂无符合条件的粉丝数据">
           <el-button type="primary" @click="loadFans">重新加载</el-button>
         </el-empty>
       </el-main>

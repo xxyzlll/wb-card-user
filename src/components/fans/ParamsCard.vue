@@ -17,6 +17,10 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  gender: {
+    type: String,
+    default: 'f'
   }
 });
 
@@ -24,6 +28,7 @@ const emit = defineEmits([
   'update:uid',
   'update:cookie',
   'update:collapsed',
+  'update:gender',
   'refresh',
   'toggle'
 ]);
@@ -34,6 +39,10 @@ function updateUid(value: string) {
 
 function updateCookie(value: string) {
   emit('update:cookie', value);
+}
+
+function updateGender(value: string) {
+  emit('update:gender', value);
 }
 
 function toggleCollapse() {
@@ -63,7 +72,7 @@ function refresh() {
 
     <div class="params-body" v-show="!collapsed">
       <el-row :gutter="20">
-        <el-col :span="12">
+        <el-col :span="8">
           <el-form-item label="博主UID">
             <el-input
               :model-value="uid"
@@ -74,7 +83,7 @@ function refresh() {
           </el-form-item>
         </el-col>
 
-        <el-col :span="12">
+        <el-col :span="8">
           <el-form-item label="Cookie">
             <el-input
               :model-value="cookie"
@@ -84,6 +93,22 @@ function refresh() {
               type="password"
               show-password
             />
+          </el-form-item>
+        </el-col>
+
+        <el-col :span="8">
+          <el-form-item label="性别筛选">
+            <el-select
+              :model-value="gender"
+              @update:modelValue="updateGender"
+              placeholder="选择性别"
+              style="width: 100%"
+            >
+              <el-option label="全部" value="all" />
+              <el-option label="女" value="f" />
+              <el-option label="男" value="m" />
+              <el-option label="未知" value="n" />
+            </el-select>
           </el-form-item>
         </el-col>
       </el-row>
